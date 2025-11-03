@@ -1,4 +1,6 @@
 import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import pg from "pg";
 import { validationResult, checkSchema } from "express-validator";
@@ -10,6 +12,9 @@ import {
 
 const app = express();
 const port = 3000;
+
+const httpServer = createServer(app); 
+const io = new Server(httpServer);
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -106,6 +111,16 @@ async function updateItemOrder(itemId, prevIndex, nextIndex) {
     }
 }
 
+io.on("connection", (socket) => {
+  console.log("Новий користувач підключився до Socket.IO");
+
+  // Ви можете тут додати логіку для відключення або інших подій
+
+  socket.on("disconnect", () => {
+    console.log("Користувач відключився");
+  });
+});
+
 app.get("/", async (req, res) => {
   let items = await getItems();
   res.render("index.ejs", {
@@ -119,7 +134,9 @@ app.post("/add", checkSchema(titleAddValidationSchema), async (req, res) => {
   if (!errors.isEmpty()) {
     console.log(errors.array());
   } else {
-    await addItem(req.body.newItem);
+    await addItem(req.body.newItem); 
+    let updatedItems = await getItems(); 
+    io.emit("task_list_updated", updatedItems);
   }
   res.redirect("/");
 });
@@ -133,8 +150,11 @@ app.post(
       console.log(errors.array());
     } else {
       let item = await getItem(req.body.updatedItemId);
-      if(item)
+      if(item){
         await updateItem(req.body.updatedItemId, req.body.updatedItemTitle);
+        let updatedItems = await getItems(); 
+        io.emit("task_list_updated", updatedItems);
+      }
     }
     res.redirect("/");
   }
@@ -143,6 +163,8 @@ app.post(
 app.post("/delete", async (req, res) => {
   if(req.body.deleteItemId){
     await deleteItem(req.body.deleteItemId);
+    let updatedItems = await getItems(); 
+    io.emit("task_list_updated", updatedItems);
   }
   res.redirect("/");
 });
@@ -159,6 +181,6 @@ app.post("/update-order", async (req, res) => {
     }
 });
 
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

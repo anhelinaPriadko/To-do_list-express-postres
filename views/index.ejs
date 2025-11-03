@@ -1,45 +1,42 @@
 <%- include('partials/header.ejs'); -%>
 
   <div class="box" id="heading">
-    <h1>
-      <%= listTitle %>
-    </h1>
+    <h1><%= listTitle %></h1>
   </div>
-  <div class="box">
+
+  <div class="box" id="list">
     <% for(let item of listItems){%>
-      <div class="item">
-        <form action="/delete" method="post">
+      <div class="item" data-order-index="<%= item.order_index %>">
+        <button class="drag-handle" type="button" aria-label="Drag to reorder">≡</button>
+
+        <form action="/delete" method="post" class="delete-form">
           <input type="checkbox" onchange="this.form.submit()" name="deleteItemId" value="<%= item.id %>">
         </form>
 
-        <p id="title<%=item.id%>">
-          <%= item.title %>
-        </p>
+        <p id="title<%=item.id%>"><%= item.title %></p>
 
         <form class="edit" action="/edit" method="post">
           <input type="hidden" name="updatedItemId" value="<%= item.id %>">
-          <input id="input<%=item.id%>" type="text" name="updatedItemTitle" value="<%= item.title %>" autocomplete="off"
-            autofocus="true" hidden="true" />
-          <button id="done<%=item.id%>" class="edit" type="submit" hidden><img class="icon"
-              src="/assets/icons/check-solid.svg" alt="tick image"></button>
+          <input id="input<%=item.id%>" type="text" name="updatedItemTitle"
+                 value="<%= item.title %>" autocomplete="off" hidden="true" />
+          <button id="done<%=item.id%>" class="edit" type="submit" hidden>
+            <img class="icon" src="/assets/icons/check-solid.svg" alt="tick image">
+          </button>
         </form>
-        <button id="edit<%=item.id%>" class="edit" onclick="handler('<%=item.id%>')"><img class="icon"
-            src="/assets/icons/pencil-solid.svg" alt="pencil image"></button>
-      </div>
-      <% } %>
 
-        <form class="item" action="/add" method="post">
-          <input type="text" name="newItem" placeholder="New Item" autocomplete="off" autofocus="true" />
-          <button class="add" type="submit" name="list" value=<%=listTitle %> >+</button>
-        </form>
+        <button id="edit<%=item.id%>" class="edit" type="button" onclick="handler('<%=item.id%>')">
+          <img class="icon" src="/assets/icons/pencil-solid.svg" alt="pencil image">
+        </button>
+      </div>
+    <% } %>
+
+    <form class="item add-item" action="/add" method="post">
+      <input type="text" name="newItem" placeholder="New Item" autocomplete="off" />
+      <button class="add" type="submit" name="list" value=<%=listTitle %>>+</button>
+    </form>
   </div>
 
-  <script>
-    function handler(id) {
-      document.getElementById("title" + id).setAttribute("hidden", true)
-      document.getElementById("edit" + id).setAttribute("hidden", true)
-      document.getElementById("done" + id).removeAttribute("hidden")
-      document.getElementById("input" + id).removeAttribute("hidden")
-    }
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/client.js"></script>
   <%- include('partials/footer.ejs'); -%>

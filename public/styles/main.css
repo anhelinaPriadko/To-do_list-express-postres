@@ -111,3 +111,71 @@ footer {
   color: white;
   text-align: center;
 }
+
+/* ====== Drag handle & Sortable tweaks (додати в кінець файлу) ====== */
+
+/* Ручка для перетягування (≡) */
+.drag-handle {
+  cursor: grab;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Коли тягнемо */
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Невеликий відступ і вирівнювання для елементів списку */
+.item {
+  gap: 8px;             /* відстань між кнопкою, текстом і кнопками дій */
+  padding: 6px 10px;    /* внутрішні відступи (вертикальні/горизонтальні) */
+  align-items: center;  /* вирівнювання по центру вздовж осі */
+}
+
+/* Дозволяємо заголовку/полю займати доступний простір */
+.item > p,
+.item input[type="text"] {
+  flex: 1;              /* займати вільний простір між ручкою і кнопками */
+  text-align: left;
+  padding: 0 8px;       /* невеликі горизонтальні відступи */
+}
+
+/* Зовнішній вигляд перетягуваного елементу (ghost) */
+.sortable-ghost {
+  opacity: 0.6;
+  transform: scale(0.99);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+/* Трохи підправимо зовнішній вигляд форми додавання як item */
+.add-item {
+  align-items: center;
+}
+
+/* Іконки — якщо треба, можна уточнити */
+.icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+}
+
+/* Якщо input в режимі редагування — добре виглядає на всю висоту item */
+.item input[type="text"] {
+  height: 60px;        /* збережено ваш розмір */
+  background: transparent;
+  border: none;
+  font-size: 20px;
+}
+
+/* Щоб checkbox/кнопки не зрушували елемент при focus */
+button,
+input[type="checkbox"] {
+  outline: none;
+}
