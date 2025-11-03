@@ -13,7 +13,7 @@ import {
 const app = express();
 const port = 3000;
 
-const httpServer = createServer(app); 
+const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 app.use(express.json());
@@ -26,7 +26,9 @@ db.connect();
 async function getItems() {
   let items = [];
   try {
-    const result = await db.query("SELECT * FROM items ORDER BY order_index ASC, id ASC"); 
+    const result = await db.query(
+      "SELECT * FROM items ORDER BY order_index ASC, id ASC"
+    );
     items = result.rows;
   } catch (error) {
     console.log(error);
@@ -38,7 +40,10 @@ async function addItem(title) {
   try {
     const maxOrderResult = await db.query("SELECT MAX(order_index) FROM items");
     const newOrderIndex = (maxOrderResult.rows[0].max || 0) + 1000;
-    await db.query("INSERT INTO items (title, order_index) VALUES ($1, $2)", [title, newOrderIndex]);
+    await db.query("INSERT INTO items (title, order_index) VALUES ($1, $2)", [
+      title,
+      newOrderIndex,
+    ]);
   } catch (error) {
     console.log(error);
   }
@@ -69,10 +74,10 @@ async function updateItem(itemId, itemTitle) {
   }
 }
 
-async function deleteItem(itemId){
-  try{
-    await db.query("DELETE FROM items WHERE id = $1",[itemId]);
-  } catch (error){
+async function deleteItem(itemId) {
+  try {
+    await db.query("DELETE FROM items WHERE id = $1", [itemId]);
+  } catch (error) {
     console.log(error);
   }
 }
@@ -83,15 +88,14 @@ async function deleteItem(itemId){
  * @returns {number}
  */
 function calculateNewIndex(prevIndex, nextIndex) {
-    if (prevIndex === null) {
-        return nextIndex / 2;
-    }
-    if (nextIndex === null) {
-        return prevIndex + 1000;
-    }
-    return (prevIndex + nextIndex) / 2;
+  if (prevIndex === null) {
+    return nextIndex / 2;
+  }
+  if (nextIndex === null) {
+    return prevIndex + 1000;
+  }
+  return (prevIndex + nextIndex) / 2;
 }
-
 
 /**
  * @param {number} itemId - ID елемента, який перетягнули.
@@ -99,16 +103,15 @@ function calculateNewIndex(prevIndex, nextIndex) {
  * @param {number | null} nextIndex - Індекс його наступного сусіда.
  */
 async function updateItemOrder(itemId, prevIndex, nextIndex) {
-    try {
-        const newOrder = calculateNewIndex(prevIndex, nextIndex);
-        await db.query("UPDATE items SET order_index = $1 WHERE id = $2", [
-            newOrder,
-            itemId,
-        ]);
-
-    } catch (error) {
-        console.log(error);
-    }
+  try {
+    const newOrder = calculateNewIndex(prevIndex, nextIndex);
+    await db.query("UPDATE items SET order_index = $1 WHERE id = $2", [
+      newOrder,
+      itemId,
+    ]);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 io.on("connection", (socket) => {
@@ -134,8 +137,8 @@ app.post("/add", checkSchema(titleAddValidationSchema), async (req, res) => {
   if (!errors.isEmpty()) {
     console.log(errors.array());
   } else {
-    await addItem(req.body.newItem); 
-    let updatedItems = await getItems(); 
+    await addItem(req.body.newItem);
+    let updatedItems = await getItems();
     io.emit("task_list_updated", updatedItems);
   }
   res.redirect("/");
@@ -150,9 +153,9 @@ app.post(
       console.log(errors.array());
     } else {
       let item = await getItem(req.body.updatedItemId);
-      if(item){
+      if (item) {
         await updateItem(req.body.updatedItemId, req.body.updatedItemTitle);
-        let updatedItems = await getItems(); 
+        let updatedItems = await getItems();
         io.emit("task_list_updated", updatedItems);
       }
     }
@@ -161,24 +164,32 @@ app.post(
 );
 
 app.post("/delete", async (req, res) => {
-  if(req.body.deleteItemId){
+  if (req.body.deleteItemId) {
     await deleteItem(req.body.deleteItemId);
-    let updatedItems = await getItems(); 
+    let updatedItems = await getItems();
     io.emit("task_list_updated", updatedItems);
   }
   res.redirect("/");
 });
 
 app.post("/update-order", async (req, res) => {
-    const { id, prevIndex, nextIndex } = req.body; 
-    const pIndex = prevIndex !== undefined && prevIndex !== null ? parseFloat(prevIndex) : null;
-    const nIndex = nextIndex !== undefined && nextIndex !== null ? parseFloat(nextIndex) : null;
-    if (id) {
-        await updateItemOrder(id, pIndex, nIndex);
-        res.sendStatus(200);
-    } else {
-        res.sendStatus(400);
-    }
+  const { id, prevIndex, nextIndex } = req.body;
+  const pIndex =
+    prevIndex !== undefined && prevIndex !== null
+      ? parseFloat(prevIndex)
+      : null;
+  const nIndex =
+    nextIndex !== undefined && nextIndex !== null
+      ? parseFloat(nextIndex)
+      : null;
+  if (id) {
+    await updateItemOrder(id, pIndex, nIndex);
+    let updatedItems = await getItems();
+    io.emit("task_list_updated", updatedItems);
+    res.sendStatus(200);
+  } else {
+    res.sendStatus(400);
+  }
 });
 
 httpServer.listen(port, () => {

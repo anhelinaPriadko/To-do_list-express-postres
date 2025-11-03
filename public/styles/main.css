@@ -179,3 +179,14 @@ button,
 input[type="checkbox"] {
   outline: none;
 }
+
+.highlight-task {
+  /* Базовий стиль підсвічування */
+  background-color: #ffeb3b80; /* Жовтий напівпрозорий */
+  transition: background-color 0.8s ease-out;
+}
+
+.item.highlight-fade {
+  /* Клас, який застосовуємо після підсвічування */
+  background-color: white; /* Повернення до білого */
+}
