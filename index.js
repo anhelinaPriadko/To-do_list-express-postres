@@ -9,6 +9,10 @@ import {
   titleAddValidationSchema,
   titleUpdateValidationSchema,
 } from "./utilities/validationSchema.mjs";
+import {
+  TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_ID,
+} from "./config/chatBotConfiguration.js";
 
 const app = express();
 const port = 3000;
@@ -123,14 +127,60 @@ async function searchItems(term) {
       `SELECT title FROM ${TARGET_TABLE} WHERE title ILIKE $1 LIMIT 6`,
       [searchTerm]
     );
-    items = result.rows.map(row => ({
-      label: row.title, 
+    items = result.rows.map((row) => ({
+      label: row.title,
       value: row.title,
     }));
   } catch (error) {
     console.log(error);
   }
   return items;
+}
+
+/**
+ * @param {string} text - Текст повідомлення.
+ */
+async function sendTelegramNotification(text) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.error("Помилка: Не налаштовано TELEGRAM_BOT_TOKEN або CHAT_ID.");
+    return;
+  }
+
+  const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+  try {
+    const response = await fetch(telegramApiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: text,
+        parse_mode: "Markdown",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Помилка Telegram API: ${response.status} - ${errorText}`);
+    } else {
+      console.log("Сповіщення Telegram успішно надіслано.");
+    }
+  } catch (error) {
+    console.error("Помилка при відправці сповіщення в Telegram:", error);
+  }
+}
+
+async function formTelegramMessage(){
+  const updatedItems = await getItems();
+    const tasksListString = updatedItems
+      .map((item) => {
+        return `- *${item.title}*`;
+      })
+      .join("\n");
+  const message = `🔔 *Твої завдання оновлено!* \n\n${tasksListString}`;
+  return message;
 }
 
 io.on("connection", (socket) => {
@@ -149,7 +199,7 @@ app.get("/search-items", async (req, res) => {
   }
 
   const results = await searchItems(searchTerm);
-  
+
   res.json(results);
 });
 
@@ -163,12 +213,15 @@ app.get("/", async (req, res) => {
 
 app.post("/add", checkSchema(titleAddValidationSchema), async (req, res) => {
   const errors = validationResult(req);
+  const newItemTitle = req.body.newItem;
   if (!errors.isEmpty()) {
     console.log(errors.array());
   } else {
-    await addItem(req.body.newItem);
-    let updatedItems = await getItems();
+    await addItem(newItemTitle);
+    const updatedItems = await getItems();
     io.emit("task_list_updated", updatedItems);
+    const message = await formTelegramMessage();
+    await sendTelegramNotification(message);
   }
   res.redirect("/");
 });
@@ -186,6 +239,8 @@ app.post(
         await updateItem(req.body.updatedItemId, req.body.updatedItemTitle);
         let updatedItems = await getItems();
         io.emit("task_list_updated", updatedItems);
+        const message = await formTelegramMessage();
+        await sendTelegramNotification(message);
       }
     }
     res.redirect("/");
@@ -197,6 +252,8 @@ app.post("/delete", async (req, res) => {
     await deleteItem(req.body.deleteItemId);
     let updatedItems = await getItems();
     io.emit("task_list_updated", updatedItems);
+    const message = await formTelegramMessage();
+    await sendTelegramNotification(message);
   }
   res.redirect("/");
 });
@@ -215,6 +272,8 @@ app.post("/update-order", async (req, res) => {
     await updateItemOrder(id, pIndex, nIndex);
     let updatedItems = await getItems();
     io.emit("task_list_updated", updatedItems);
+    const message = await formTelegramMessage();
+    await sendTelegramNotification(message);
     res.sendStatus(200);
   } else {
     res.sendStatus(400);
