@@ -261,8 +261,9 @@ app.post("/delete", async (req, res) => {
     io.emit("task_list_updated", updatedItems);
     const message = await formTelegramMessage();
     await sendTelegramNotification(message);
+    return res.sendStatus(200);
   }
-  res.redirect("/");
+  res.sendStatus(400);
 });
 
 app.post("/update-order", async (req, res) => {

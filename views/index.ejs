@@ -10,8 +10,7 @@
         <button class="drag-handle" type="button" aria-label="Drag to reorder">≡</button>
 
         <form action="/delete" method="post" class="delete-form">
-          <input type="checkbox" onchange="this.form.submit()" name="deleteItemId" value="<%= item.id %>">
-        </form>
+  <input type="checkbox" name="deleteItemId" value="<%= item.id %>"> </form>
 
         <p id="title<%=item.id%>"><%= item.title %></p>
 

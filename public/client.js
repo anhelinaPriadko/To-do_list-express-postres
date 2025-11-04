@@ -40,13 +40,13 @@ function createItemElement(item) {
     editBtn.addEventListener("click", () => handler(item.id));
   }
 
-  // Events: delete form
-  const deleteForm = wrapper.querySelector(".delete-form");
-  if (deleteForm) {
-    deleteForm.addEventListener("submit", (ev) => {
-      ev.preventDefault();
+  // Events: delete
+  const checkbox = wrapper.querySelector('input[name="deleteItemId"]');
+  if (checkbox) {
+    checkbox.addEventListener("change", () => {
+      const id = item.id;
       const params = new URLSearchParams();
-      params.append("deleteItemId", item.id);
+      params.append("deleteItemId", id);
       fetch("/delete", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -228,7 +228,7 @@ socket.on("task_list_updated", (updatedItems) => {
   try {
     applyUpdates(updatedItems);
   } catch (err) {
-    console.error("Apply updates error", err);    
+    console.error("Apply updates error", err);
   }
 });
 
@@ -253,8 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: params.toString(),
       })
-        .then(() => {
-        })
+        .then(() => {})
         .catch((err) => console.error("Add error", err));
     });
   }
@@ -263,23 +262,6 @@ document.addEventListener("DOMContentLoaded", () => {
     container.addEventListener("submit", (ev) => {
       const form = ev.target;
       if (!(form instanceof HTMLFormElement)) return;
-
-      // delete-form
-      if (form.classList.contains("delete-form")) {
-        ev.preventDefault();
-        const idInput = form.querySelector('input[name="deleteItemId"]');
-        const id = idInput ? idInput.value : null;
-        if (!id) return;
-        const params = new URLSearchParams();
-        params.append("deleteItemId", id);
-        fetch("/delete", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params.toString(),
-        }).catch((err) => console.error("Delete error", err));
-      }
-
-      // edit form
       if (form.classList.contains("edit")) {
         ev.preventDefault();
         const idInput = form.querySelector('input[name="updatedItemId"]');
@@ -307,6 +289,24 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Edit error", err);
             titleInput.disabled = false;
           });
+      }
+    });
+
+    container.addEventListener("change", (ev) => {
+      const checkbox = ev.target;
+      if (
+        checkbox instanceof HTMLInputElement &&
+        checkbox.name === "deleteItemId" &&
+        checkbox.checked
+      ) {
+        const id = checkbox.value;
+        const params = new URLSearchParams();
+        params.append("deleteItemId", id);
+        fetch("/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        }).catch((err) => console.error("Delete error", err));
       }
     });
   }
@@ -347,8 +347,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   try {
     $("#newItemInput").autocomplete({
-      minLength: 3, 
-      delay: 300, 
+      minLength: 3,
+      delay: 300,
       source: function (request, response) {
         $.ajax({
           url: "/search-items",
@@ -361,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
           },
           error: function (xhr, status, error) {
             console.error("Autocomplete search failed:", status, error);
-            response([]); 
+            response([]);
           },
         });
       },
@@ -388,7 +388,6 @@ function updateItemOrder(itemId, prevIndex, nextIndex) {
     })
     .catch((error) => console.error("Error:", error));
 }
-
 
 function escapeHtml(text) {
   if (text === null || text === undefined) return "";
@@ -436,23 +435,12 @@ function createItemElement(item) {
     editBtn.addEventListener("click", () => handler(item.id));
     editBtn.style.outline = "none";
   }
-
-  const checkbox = wrapper.querySelector('input[name="deleteItemId"]');
-  if (checkbox) {
-    checkbox.addEventListener("change", () => {
-      const form = checkbox.closest("form");
-      if (form) form.submit();
-    });
-  }
-
-
   return wrapper;
 }
 
 function applyUpdates(newItems) {
   const container = document.getElementById("list");
   if (!container) return;
-
 
   const addForm = container.querySelector(".add-item");
 
