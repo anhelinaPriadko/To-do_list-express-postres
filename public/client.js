@@ -1,8 +1,5 @@
-// client.js (замініть існуючий файл на цей)
-
 const socket = io();
 
-// --- UI helpers ---
 function createItemElement(item) {
   const wrapper = document.createElement("div");
   wrapper.className = "item";
@@ -38,13 +35,12 @@ function createItemElement(item) {
 
   // Events: edit button
   const editBtn = wrapper.querySelector(`#edit${item.id}`);
-  // прибираємо будь-який фокус-контуру на випадок:
   if (editBtn) {
     editBtn.style.outline = "none";
     editBtn.addEventListener("click", () => handler(item.id));
   }
 
-  // Events: delete form (we prevent normal navigation and use fetch)
+  // Events: delete form
   const deleteForm = wrapper.querySelector(".delete-form");
   if (deleteForm) {
     deleteForm.addEventListener("submit", (ev) => {
@@ -92,76 +88,62 @@ function escapeHtml(text) {
 }
 
 // Показати/приховати елементи редагування
-// Заміни поточну handler(...) на цю версію
 function handler(id) {
   const titleEl = document.getElementById("title" + id);
   const editBtn = document.getElementById("edit" + id);
   const doneBtn = document.getElementById("done" + id);
   const inputEl = document.getElementById("input" + id);
 
-  // знайдемо батьківський елемент .item — щоб сховати чекбокс в ньому
   let itemEl = null;
   if (titleEl) itemEl = titleEl.closest(".item");
   if (!itemEl && inputEl) itemEl = inputEl.closest(".item");
   if (!itemEl && editBtn) itemEl = editBtn.closest(".item");
 
-  // Ховаємо заголовок та кнопку олівця, показуємо кнопку "готово" і інпут
   if (titleEl) titleEl.setAttribute("hidden", "");
   if (editBtn) {
     editBtn.setAttribute("hidden", "");
-    // переконатися, що немає видно фокусу (в деяких браузерах може лишитись)
     editBtn.blur && editBtn.blur();
   }
   if (doneBtn) doneBtn.removeAttribute("hidden");
   if (inputEl) {
     inputEl.removeAttribute("hidden");
     inputEl.focus();
-    // Поставити курсор в кінець value
     const val = inputEl.value;
     inputEl.value = "";
     inputEl.value = val;
   }
 
-  // Сховати чекбокс (галочку) під час редагування
   if (itemEl) {
     const checkbox = itemEl.querySelector('input[name="deleteItemId"]');
     if (checkbox) checkbox.setAttribute("hidden", "");
-    // Якщо чекбокс був у формі (label/інші елементи) — можна сховати всю форму:
     const deleteForm = itemEl.querySelector("form.delete-form");
     if (deleteForm) deleteForm.setAttribute("hidden", "");
   }
 }
 
-// Закриває UI редагування для елемента id; оновлює текст заголовка якщо newTitle заданий
 function closeEditUI(id, newTitle) {
   const titleEl = document.getElementById("title" + id);
   const editBtn = document.getElementById("edit" + id);
   const doneBtn = document.getElementById("done" + id);
   const inputEl = document.getElementById("input" + id);
 
-  // Показати заголовок і оновити текст
   if (titleEl) {
     if (typeof newTitle === "string") titleEl.innerText = newTitle;
     titleEl.removeAttribute("hidden");
   }
 
-  // Показати кнопку олівця
   if (editBtn) {
     editBtn.removeAttribute("hidden");
     editBtn.blur && editBtn.blur();
   }
 
-  // Сховати кнопку "готово"
   if (doneBtn) {
     doneBtn.setAttribute("hidden", "");
   }
 
-  // Сховати інпут редагування
   if (inputEl) {
     inputEl.setAttribute("hidden", "");
   }
-
-  // Повернути видимість форми видалення / чекбоксу (якщо були сховані)
   const itemEl = titleEl ? titleEl.closest(".item") : null;
   if (itemEl) {
     const deleteForm = itemEl.querySelector("form.delete-form");
@@ -176,17 +158,14 @@ function applyUpdates(newItems) {
   const container = document.getElementById("list");
   if (!container) return;
 
-  // add form знаходиться в контейнері з класом 'add-item'
   const addForm = container.querySelector(".add-item");
 
-  // Map існуючих елементів (без add-form)
   const existingEls = Array.from(container.querySelectorAll(".item")).filter(
     (el) => !el.classList.contains("add-item")
   );
 
   const existingMap = new Map();
   existingEls.forEach((el) => {
-    // шукаємо id у прихованому полі форми (updatedItemId) або чекбоксі (deleteItemId)
     const idInput = el.querySelector(
       'input[name="updatedItemId"], input[name="deleteItemId"]'
     );
@@ -195,7 +174,6 @@ function applyUpdates(newItems) {
     }
   });
 
-  // визначаємо, який елемент зараз у редагуванні — щоб не переписувати value
   const activeInput = container.querySelector(
     'input[type="text"]:not([hidden])'
   );
@@ -204,14 +182,12 @@ function applyUpdates(newItems) {
 
   const newIds = new Set();
 
-  // Проходимо нові елементи у порядку, в якому треба їх розташувати
   for (const item of newItems) {
     const id = String(item.id);
     newIds.add(id);
     let el = existingMap.get(id);
 
     if (el) {
-      // Оновлюємо текст, orderIndex, значення інпутів тільки якщо не редагуємо зараз цей елемент
       const titleEl = el.querySelector("#title" + id);
       const inputEl = el.querySelector("#input" + id);
       if (titleEl && id !== activeEditId) titleEl.innerText = item.title;
@@ -221,11 +197,9 @@ function applyUpdates(newItems) {
       }
       el.dataset.orderIndex = item.order_index ?? 0;
     } else {
-      // Створюємо новий DOM-елемент
       el = createItemElement(item);
     }
 
-    // Вставляємо перед формою додавання (щоб add form завжди був останнім)
     if (addForm) {
       container.insertBefore(el, addForm);
     } else {
@@ -233,7 +207,6 @@ function applyUpdates(newItems) {
     }
   }
 
-  // Видалити елементи, яких немає в newItems
   for (const [id, el] of existingMap.entries()) {
     if (!newIds.has(id)) {
       el.remove();
@@ -255,9 +228,7 @@ socket.on("task_list_updated", (updatedItems) => {
   try {
     applyUpdates(updatedItems);
   } catch (err) {
-    console.error("Apply updates error", err);
-    // На випадок фейлу — як fallback можна перезавантажити сторінку, але тільки якщо потрібно:
-    // window.location.reload();
+    console.error("Apply updates error", err);    
   }
 });
 
@@ -288,7 +259,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Делегуємо submit для форм edit / delete (щоб обробляти нові елементи теж)
   if (container) {
     container.addEventListener("submit", (ev) => {
       const form = ev.target;
@@ -310,7 +280,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // edit form
-      // edit form
       if (form.classList.contains("edit")) {
         ev.preventDefault();
         const idInput = form.querySelector('input[name="updatedItemId"]');
@@ -321,7 +290,6 @@ document.addEventListener("DOMContentLoaded", () => {
         params.append("updatedItemId", idInput.value);
         params.append("updatedItemTitle", titleInput.value);
 
-        // Дезактивуємо інпут тимчасово, щоб уникнути дубль-запитів
         titleInput.disabled = true;
 
         fetch("/edit", {
@@ -332,23 +300,17 @@ document.addEventListener("DOMContentLoaded", () => {
           .then((response) => {
             if (!response.ok)
               throw new Error("Server returned " + response.status);
-            // Успішно — закриваємо UI редагування локально одразу
             closeEditUI(idInput.value, titleInput.value);
-            // Повертаємо інпут активним (на випадок, якщо сервер відповів але ми хочемо ще редагувати)
             titleInput.disabled = false;
           })
           .catch((err) => {
             console.error("Edit error", err);
-            // у разі помилки — реенейблити інпут і не закривати UI
             titleInput.disabled = false;
-            // опціонально: показати повідомлення користувачу
-            // alert('Не вдалося зберегти зміни — спробуйте ще раз.');
           });
       }
     });
   }
 
-  // Ініціалізуємо Sortable після DOMContentLoaded
   const listContainer = document.getElementById("list");
   if (listContainer) {
     new Sortable(listContainer, {
@@ -358,13 +320,11 @@ document.addEventListener("DOMContentLoaded", () => {
       ghostClass: "sortable-ghost",
       onEnd: function (evt) {
         const itemEl = evt.item;
-        // знаходимо id (у прихованому полі updatedItemId або чекбоксі)
         const idInput =
           itemEl.querySelector("input[name='updatedItemId']") ||
           itemEl.querySelector("input[name='deleteItemId']");
         const itemId = idInput ? idInput.value : null;
 
-        // визначаємо сусідів (ігноруємо форму додавання в кінці)
         let prevEl = itemEl.previousElementSibling;
         while (prevEl && prevEl.classList.contains("add-item"))
           prevEl = prevEl.previousElementSibling;
@@ -384,9 +344,36 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     console.warn("List container not found — Sortable not initialized.");
   }
+
+  try {
+    $("#newItemInput").autocomplete({
+      minLength: 3, 
+      delay: 300, 
+      source: function (request, response) {
+        $.ajax({
+          url: "/search-items",
+          dataType: "json",
+          data: {
+            term: request.term,
+          },
+          success: function (data) {
+            response(data);
+          },
+          error: function (xhr, status, error) {
+            console.error("Autocomplete search failed:", status, error);
+            response([]); 
+          },
+        });
+      },
+      select: function (event, ui) {
+        console.log("Selected: " + ui.item.label);
+      },
+    });
+  } catch (error) {
+    console.error("Error initializing Autocomplete:", error);
+  }
 });
 
-// --- update-order via fetch (без reload) ---
 function updateItemOrder(itemId, prevIndex, nextIndex) {
   fetch("/update-order", {
     method: "POST",
@@ -398,12 +385,10 @@ function updateItemOrder(itemId, prevIndex, nextIndex) {
         throw new Error(
           "An error occured on the server while changing the order!"
         );
-      // ніякого reload — сервер надішле оновлений список по сокету
     })
     .catch((error) => console.error("Error:", error));
 }
 
-/* === partial sync: створення елементу, часткове оновлення списку та обробник сокета === */
 
 function escapeHtml(text) {
   if (text === null || text === undefined) return "";
@@ -415,7 +400,6 @@ function escapeHtml(text) {
 }
 
 function createItemElement(item) {
-  // Структура дуже близька до index.ejs — щоб вигляд і поведінка були ті самі.
   const wrapper = document.createElement("div");
   wrapper.className = "item";
   wrapper.dataset.orderIndex = item.order_index ?? 0;
@@ -447,23 +431,21 @@ function createItemElement(item) {
     </button>
   `;
 
-  // Підв'язуємо onclick до олівця (викликає вже наявну у тебе handler)
   const editBtn = wrapper.querySelector(`#edit${item.id}`);
   if (editBtn) {
     editBtn.addEventListener("click", () => handler(item.id));
     editBtn.style.outline = "none";
   }
 
-  // Чекбокс: відтворюємо початкову поведінку onchange="this.form.submit()"
   const checkbox = wrapper.querySelector('input[name="deleteItemId"]');
   if (checkbox) {
     checkbox.addEventListener("change", () => {
       const form = checkbox.closest("form");
-      if (form) form.submit(); // залишаємо сабміт через форму (щоб бекенд працював як зараз)
+      if (form) form.submit();
     });
   }
 
-  // (Редагування робиться через форму — ми не міняємо її сабміт-логіку тут)
+
   return wrapper;
 }
 
@@ -471,10 +453,9 @@ function applyUpdates(newItems) {
   const container = document.getElementById("list");
   if (!container) return;
 
-  // Знаходимо форму додавання, щоб вставляти перед нею
+
   const addForm = container.querySelector(".add-item");
 
-  // Отримуємо поточні елементи (ігноруємо add-item)
   const existingEls = Array.from(container.querySelectorAll(".item")).filter(
     (el) => !el.classList.contains("add-item")
   );
@@ -487,7 +468,6 @@ function applyUpdates(newItems) {
     if (idInput) existingMap.set(String(idInput.value), el);
   });
 
-  // Збережемо активний інпут (якщо користувач зараз редагує) — щоб не затирати value/focus
   const activeInput = container.querySelector(
     'input[type="text"]:not([hidden])'
   );
@@ -496,14 +476,12 @@ function applyUpdates(newItems) {
 
   const newIds = new Set();
 
-  // Проходимо новий список у правильному порядку і оновлюємо/вставляємо елементи
   for (const item of newItems) {
     const id = String(item.id);
     newIds.add(id);
     let el = existingMap.get(id);
 
     if (el) {
-      // Оновлюємо заголовок (тільки якщо зараз не редагуємо цей елемент)
       const titleEl = el.querySelector("#title" + id);
       const inputEl = el.querySelector("#input" + id);
       if (titleEl && id !== activeEditId) titleEl.innerText = item.title;
@@ -513,11 +491,9 @@ function applyUpdates(newItems) {
       }
       el.dataset.orderIndex = item.order_index ?? 0;
     } else {
-      // Створюємо новий DOM-елемент і вставляємо
       el = createItemElement(item);
     }
 
-    // Вставляємо елемент у правильне місце (перед формою додавання, якщо вона є)
     if (addForm) {
       container.insertBefore(el, addForm);
     } else {
@@ -525,14 +501,12 @@ function applyUpdates(newItems) {
     }
   }
 
-  // Видаляємо елементи, що більше не входять у newItems
   for (const [id, el] of existingMap.entries()) {
     if (!newIds.has(id)) {
       el.remove();
     }
   }
 
-  // Якщо користувач був у режимі редагування — відновимо фокус і текст (щоб не зіпсувати введення)
   if (activeEditId && activeValue !== null) {
     const input = document.getElementById("input" + activeEditId);
     if (input) {
@@ -542,8 +516,6 @@ function applyUpdates(newItems) {
   }
 }
 
-// М'який обробник сокета — застосовує часткові оновлення,
-// і лише якщо щось піде не так — робить fallback на reload (страховка).
 socket.on("task_list_updated", (updatedItems) => {
   try {
     if (typeof applyUpdates === "function") {

@@ -114,14 +114,43 @@ async function updateItemOrder(itemId, prevIndex, nextIndex) {
   }
 }
 
+async function searchItems(term) {
+  let items = [];
+  const TARGET_TABLE = "autocomplete_data";
+  const searchTerm = `%${term}%`;
+  try {
+    const result = await db.query(
+      `SELECT title FROM ${TARGET_TABLE} WHERE title ILIKE $1 LIMIT 6`,
+      [searchTerm]
+    );
+    items = result.rows.map(row => ({
+      label: row.title, 
+      value: row.title,
+    }));
+  } catch (error) {
+    console.log(error);
+  }
+  return items;
+}
+
 io.on("connection", (socket) => {
   console.log("Новий користувач підключився до Socket.IO");
-
-  // Ви можете тут додати логіку для відключення або інших подій
 
   socket.on("disconnect", () => {
     console.log("Користувач відключився");
   });
+});
+
+app.get("/search-items", async (req, res) => {
+  const searchTerm = req.query.term;
+
+  if (!searchTerm || searchTerm.length < 3) {
+    return res.json([]);
+  }
+
+  const results = await searchItems(searchTerm);
+  
+  res.json(results);
 });
 
 app.get("/", async (req, res) => {
