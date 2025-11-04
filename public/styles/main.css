@@ -180,13 +180,51 @@ input[type="checkbox"] {
   outline: none;
 }
 
-.highlight-task {
-  /* Базовий стиль підсвічування */
-  background-color: #ffeb3b80; /* Жовтий напівпрозорий */
-  transition: background-color 0.8s ease-out;
+/* базові переходи для item (пересування + плавність opacity) */
+.item {
+  transition: background-color 0.8s ease, transform 220ms ease, opacity 220ms ease, height 300ms ease, padding 300ms ease, margin 300ms ease;
+  will-change: transform, opacity;
+  overflow: hidden;
 }
 
-.item.highlight-fade {
-  /* Клас, який застосовуємо після підсвічування */
-  background-color: white; /* Повернення до білого */
+/* Вставка — невеликий підскок + поява */
+.item.item-enter {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.995);
 }
+.item.item-enter.item-enter-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Видалення (схлопування) */
+.item.item-leave {
+  opacity: 1;
+  height: auto; /* початковий стан */
+}
+.item.item-leave.item-leave-active {
+  opacity: 0;
+  height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  transform: scaleY(0.98);
+}
+
+/* Підсвітка при синхронізації/оновленні (жовтий пульс -> назад) */
+.highlight-task {
+  background-color: rgba(255, 235, 59, 0.35); /* напівпрозорий жовтий */
+  transition: background-color 1s ease;
+}
+.highlight-task.highlight-fade {
+  background-color: white; /* повернення до білого */
+}
+
+/* Невелика тінь при вставці */
+.item.item-enter.item-enter-active {
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+}
+
+/* Щоб чекбокс/кнопки не "стрибають" при анімації висоти */
+.item > * { box-sizing: border-box; }
