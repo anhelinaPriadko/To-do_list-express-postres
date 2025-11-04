@@ -13,6 +13,7 @@ import {
   TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID,
 } from "./config/chatBotConfiguration.js";
+import { getCache, setCache } from "./utilities/cache.js";
 
 const app = express();
 const port = 3000;
@@ -192,15 +193,21 @@ io.on("connection", (socket) => {
 });
 
 app.get("/search-items", async (req, res) => {
-  const searchTerm = req.query.term;
+    const searchTerm = req.query.term;
 
-  if (!searchTerm || searchTerm.length < 3) {
-    return res.json([]);
-  }
+    if (!searchTerm || searchTerm.length < 3) {
+        return res.json([]);
+    }
+    const cacheKey = `autocomplete:${searchTerm.toLowerCase()}`;
+    const cachedResults = getCache(cacheKey);
 
-  const results = await searchItems(searchTerm);
-
-  res.json(results);
+    if (cachedResults) {
+        return res.json(cachedResults);
+    }
+    const results = await searchItems(searchTerm);
+    setCache(cacheKey, results, 60 * 1000); 
+    
+    res.json(results);
 });
 
 app.get("/", async (req, res) => {

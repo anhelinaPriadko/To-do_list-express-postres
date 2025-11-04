@@ -245,6 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!input) return;
       const val = input.value.trim();
       if (!val) return;
+      input.value = "";
       const params = new URLSearchParams();
       params.append("newItem", val);
       fetch("/add", {
@@ -253,7 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
         body: params.toString(),
       })
         .then(() => {
-          input.value = "";
         })
         .catch((err) => console.error("Add error", err));
     });
